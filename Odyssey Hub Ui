@@ -285,8 +285,20 @@ function Holo:CreateWindow(opts)
     Stroke(minBtn, "Accent", 0.62, 1)
 
     -- tabs bar
-    local tabBar = New("Frame", {Name = "TabBar", BackgroundTransparency = 1, Position = UDim2.fromOffset(22, 58), Size = UDim2.new(1, -44, 0, 36), ZIndex = 3, Parent = main})
-    List(tabBar, Enum.FillDirection.Horizontal, 22)
+    -- tabs scroll sideways when there are too many to fit (so the last ones, like SETTINGS, never get cut off)
+    local tabBar = New("ScrollingFrame", {Name = "TabBar", BackgroundTransparency = 1, BorderSizePixel = 0, Position = UDim2.fromOffset(22, 58), Size = UDim2.new(1, -44, 0, 38),
+        CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, ScrollingDirection = Enum.ScrollingDirection.X, ScrollBarThickness = 2,
+        ElasticBehavior = Enum.ElasticBehavior.Never, ZIndex = 3, Parent = main})
+    paint(tabBar, "ScrollBarImageColor3", "Accent")
+    List(tabBar, Enum.FillDirection.Horizontal, 16)
+    Pad(tabBar, 0, 10, 2, 0)
+    tabBar.ScrollBarThickness = 3
+    tabBar.InputChanged:Connect(function(i)   -- mouse wheel over the tabs scrolls them sideways
+        if i.UserInputType == Enum.UserInputType.MouseWheel then
+            local maxX = math.max(0, tabBar.AbsoluteCanvasSize.X - tabBar.AbsoluteSize.X)
+            tabBar.CanvasPosition = Vector2.new(math.clamp(tabBar.CanvasPosition.X - i.Position.Z * 60, 0, maxX), 0)
+        end
+    end)
     self.TabBar = tabBar
     local pages = New("Frame", {Name = "Pages", BackgroundTransparency = 1, Position = UDim2.fromOffset(22, 102), Size = UDim2.new(1, -44, 1, -116), ZIndex = 3, Parent = main})
     self.Pages = pages
@@ -360,7 +372,7 @@ function Holo:CreateWindow(opts)
 
     G.OdysseyHoloWindow = self
 
-    -- built-in CONFIG tab (always last)
+    -- built-in SETTINGS tab (always last)
     if opts.SettingsTab ~= false then
         task.defer(function() self:_BuildSettings() end)
     end
@@ -1103,10 +1115,12 @@ function Tab:CreateProgress(o)
 end
 
 ------------------------------------------------------------------------------------------
--- built-in CONFIG tab
+-- built-in SETTINGS tab (scripts can add their own options to it: set Window.ExtraSettings = function(tab) ... end
+-- right after CreateWindow, and they show under the UI options on the left)
 ------------------------------------------------------------------------------------------
 function Window:_BuildSettings()
-    local tab = self:CreateTab({Name = "CONFIG", Order = 999})
+    local tab = self:CreateTab({Name = "SETTINGS", Order = 999})
+    self.SettingsTab = tab
     tab.NoDot = true
     tab:CreateSection("PROJECTION COLOR")
     tab:CreateChoice({Options = THEME_ORDER, CurrentOption = Holo.Flags.HoloTheme or "Blue", Callback = function(v) self:SetTheme(v) end})
@@ -1116,6 +1130,11 @@ function Window:_BuildSettings()
         Callback = function(v) self.Main.BackgroundTransparency = 1 - v / 100 end})
     tab:CreateSlider({Name = "UI Size", Range = {60, 130}, Increment = 5, CurrentValue = saved("HoloScale", 100), Suffix = "%", Flag = "HoloScale",
         Callback = function(v) self.FitScale(v / 100) end})
+    if type(self.ExtraSettings) == "function" then
+        local ok, err = pcall(self.ExtraSettings, tab)
+        if not ok then warn("[Odyssey Holo] ExtraSettings: " .. tostring(err)) end
+        tab:Side("Left")
+    end
     tab:Side("Right")
     tab:CreateSection("CONTROLS")
     tab:CreateBind({Name = "Hide / Show", CurrentKeybind = self.ToggleKey, Flag = "HoloToggleKey", ChangedCallback = function(k) self.ToggleKey = k end})
