@@ -153,10 +153,9 @@ local function queueSave()
     saveQueued = true
     task.delay(1, function() saveQueued = false saveNow() end)
 end
-local function setFlag(flag, v)
+local function setFlag(flag, v)   -- settings are only written to the file when you press Save Config
     if not flag then return end
     Holo.Flags[flag] = v
-    queueSave()
 end
 local function saved(flag, default)
     if flag and Holo.Flags[flag] ~= nil then return Holo.Flags[flag] end
@@ -304,7 +303,7 @@ function Holo:CreateWindow(opts)
     self.Pages = pages
 
     -- minimize orb
-    local orb = New("TextButton", {Name = "Orb", Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(58, 58), Position = UDim2.new(0, 22, 0.5, -29), BackgroundTransparency = 0.15, Visible = false, ZIndex = 20, Parent = gui})
+    local orb = New("TextButton", {Name = "Orb", Text = "", AutoButtonColor = false, Size = UDim2.fromOffset(58, 58), Position = UDim2.new(0, 19, 0.5, -174), BackgroundTransparency = 0.15, Visible = false, ZIndex = 20, Parent = gui})   -- locked spot (left side, up top)
     paint(orb, "BackgroundColor3", "Panel")
     Corner(orb, UDim.new(1, 0))
     Stroke(orb, "Accent", 0, 1)
@@ -361,7 +360,7 @@ function Holo:CreateWindow(opts)
         end))
     end
     dragify(header, root)
-    dragify(orb, orb, function() self:SetVisible(true) end)
+    orb.MouseButton1Click:Connect(function() self:SetVisible(true) end)   -- the orb is locked in place: tap to open, no dragging
 
     -- toggle key
     self.ToggleKey = saved("HoloToggleKey", (opts.ToggleKey and opts.ToggleKey.Name) or "RightControl")
