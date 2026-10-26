@@ -1579,7 +1579,8 @@ function Window:_buildHomeTab(gameName)
 
 	local statsGrid=New("Frame",{Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,LayoutOrder=1,Parent=list})
 	local statsGL=Instance.new("UIGridLayout")
-	statsGL.CellSize=UDim2.new(1/3,-6,0,62)
+	local tileCell=UDim2.new(1/3,-6,0,62)
+	statsGL.CellSize=tileCell
 	statsGL.CellPadding=UDim2.new(0,8,0,8)
 	statsGL.SortOrder=Enum.SortOrder.LayoutOrder
 	statsGL.Parent=statsGrid
@@ -1602,9 +1603,6 @@ function Window:_buildHomeTab(gameName)
 		end
 		return v,fill
 	end
-	local hVal,hBar=StatTile("Health","100 / 100",true)
-	local pingTile=StatTile("Ping","...")
-	local fpsTile=StatTile("FPS","...")
 
 	local cols=New("Frame",{Size=UDim2.new(1,0,0,0),AutomaticSize=Enum.AutomaticSize.Y,BackgroundTransparency=1,LayoutOrder=2,Parent=list})
 	local colsL=Instance.new("UIListLayout")
@@ -1622,7 +1620,7 @@ function Window:_buildHomeTab(gameName)
 	self._homeRelayout=function(compact)
 		homeCompact=compact
 		task.defer(function() syncLog() end)
-		statsGL.CellSize=compact and UDim2.new(1,0,0,62) or UDim2.new(1/3,-6,0,62)
+		statsGL.CellSize=compact and UDim2.new(1,0,0,62) or tileCell
 		colsL.FillDirection=compact and Enum.FillDirection.Vertical or Enum.FillDirection.Horizontal
 		local w=compact and UDim2.new(1,0,0,0) or UDim2.new(0.5,-5,0,0)
 		colL.Size=w; colR.Size=w
@@ -1668,8 +1666,7 @@ function Window:_buildHomeTab(gameName)
 	local idV=InfoRow(charL,"User ID","...",true)
 
 	local timCard,timL=HCard(colR,1,"Session")
-	local srvAgeV=TimerRow(timL,"Time in server","0:00")
-	local playersV=TimerRow(timL,"Server players",#Players:GetPlayers().." / "..Players.MaxPlayers)
+	timCard.Visible=false
 
 	local logCard,logL=HCard(colL,2,"What's new")
 	local logPill=New("TextLabel",{Text="v1.0",TextSize=12,TextColor3=Color3.fromRGB(123,140,255),Font=Enum.Font.BuilderSansBold,BackgroundTransparency=1,Size=UDim2.new(0,100,0,20),AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,0,0,0),TextXAlignment=Enum.TextXAlignment.Right,Parent=logL:FindFirstChildWhichIsA("Frame")})
@@ -1824,32 +1821,47 @@ function Window:_buildHomeTab(gameName)
 		RefreshIdentityDisplay()
 	end)
 
-	local joinTime=tick()
-	local frames=0
-	RunService.RenderStepped:Connect(function() frames=frames+1 end)
-	local function setText(lbl,txt) if lbl.Text~=txt then lbl.Text=txt end end
-	task.spawn(function()
-		local last=tick()
-		while tab._list.Parent do
-			task.wait(0.5)
-			pcall(function()
-				local now=tick()
-				local fps=math.floor(frames/math.max(now-last,0.001)+0.5)
-				frames=0; last=now
-				if not tab._tabData.page.Visible or (self._main and not self._main.Visible) then return end
-				local char=LocalPlayer.Character
-				local hum=char and char:FindFirstChildWhichIsA("Humanoid")
-				if hum then
-					setText(hVal,math.floor(hum.Health).." / "..math.floor(hum.MaxHealth))
-					hBar.Size=UDim2.new(math.clamp(hum.Health/math.max(hum.MaxHealth,1),0,1),0,1,0)
-				end
-				setText(pingTile,math.floor(LocalPlayer:GetNetworkPing()*1000).." ms")
-				setText(fpsTile,tostring(fps))
-				srvAgeV.Text=formatTime(math.floor(now-joinTime))
-				setText(playersV,#Players:GetPlayers().." / "..Players.MaxPlayers)
-			end)
+	function self:SetHomeStats(list)
+		for _,ch in ipairs(statsGrid:GetChildren()) do if ch:IsA("Frame") then ch:Destroy() end end
+		tileN=0
+		local n=#(list or {})
+		local per=(n<=3 and math.max(n,1)) or (n==4 and 4) or 3
+		tileCell=UDim2.new(1/per,-6,0,62)
+		statsGL.CellSize=tileCell
+		local apis={}
+		for i,st in ipairs(list or {}) do
+			local v,fill=StatTile(st.Name or "",tostring(st.Value or "-"),st.Bar)
+			local api={}
+			function api:Set(o)
+				if type(o)~="table" then o={Value=o} end
+				if o.Value~=nil and v.Text~=tostring(o.Value) then v.Text=tostring(o.Value) end
+				if fill and o.Percent then fill.Size=UDim2.new(math.clamp(o.Percent,0,1),0,1,0) end
+			end
+			apis[i]=api
+			if st.Name then apis[st.Name]=api end
 		end
-	end)
+		return apis
+	end
+	function self:SetHomeCard(o)
+		o=o or {}
+		for _,ch in ipairs(timL:GetChildren()) do
+			if ch:IsA("Frame") and ch.LayoutOrder==0 then
+				local t=ch:FindFirstChildWhichIsA("TextLabel")
+				if t then t.Text=tostring(o.Title or "Stats"):upper() end
+			elseif ch:IsA("Frame") then ch:Destroy() end
+		end
+		timCard.Visible=true
+		local apis={}
+		for i,r in ipairs(o.Rows or {}) do
+			local v=TimerRow(timL,r.Name or "",tostring(r.Value or "-"))
+			local api={}
+			function api:Set(x) if type(x)=="table" then x=x.Value end if v.Text~=tostring(x) then v.Text=tostring(x) end end
+			apis[i]=api
+			if r.Name then apis[r.Name]=api end
+		end
+		task.defer(syncLog)
+		return apis
+	end
 	self._homeList=list
 	self._homeOrder=10
 	return tab
@@ -2353,7 +2365,7 @@ function Odyssey:CreateWindow(opts)
 	pcall(function() FooterKey.Text="Toggle UI: "..toggleKey.Name.."   ·   Lib v"..Odyssey.Version end)
 	UserInputService.InputBegan:Connect(function(i,gp) if not gp and i.KeyCode==toggleKey then Main.Visible=not Main.Visible end end)
 
-	local MobileToggle=New("TextButton",{Name="OdysseyMobileToggle",Text="",BackgroundColor3=C.Card,BackgroundTransparency=0.02,BorderSizePixel=0,Size=UDim2.new(0,50,0,50),Position=UDim2.new(0,23,0.5,-270),AutoButtonColor=false,ZIndex=500,Parent=Gui})
+	local MobileToggle=New("TextButton",{Name="OdysseyMobileToggle",Text="",BackgroundColor3=C.Card,BackgroundTransparency=0.02,BorderSizePixel=0,Size=UDim2.new(0,50,0,50),Position=UDim2.new(0,22,0.5,-182),AutoButtonColor=false,ZIndex=500,Parent=Gui})
 	Corner(MobileToggle,16)
 	local mtStroke=Stroke(MobileToggle,C.White,1.5,0)
 	AccentGrad(mtStroke,45)
@@ -2364,6 +2376,7 @@ function Odyssey:CreateWindow(opts)
 	local function mtRefresh()
 		local open=Main.Visible
 		mtOrb.BackgroundTransparency=1
+		MobileToggle.Visible=not open
 		TweenService:Create(mtIcon,TweenInfo.new(0.35,Enum.EasingStyle.Back),{Rotation=open and 0 or 90}):Play()
 	end
 	Main:GetPropertyChangedSignal("Visible"):Connect(mtRefresh)
@@ -2381,9 +2394,6 @@ function Odyssey:CreateWindow(opts)
 		if mtDrag and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
 			local d=i.Position-mtStart
 			if not mtMoved and (math.abs(d.X)>6 or math.abs(d.Y)>6) then mtMoved=true end
-			if mtMoved then
-				MobileToggle.Position=UDim2.new(mtPos.X.Scale,mtPos.X.Offset+d.X,mtPos.Y.Scale,mtPos.Y.Offset+d.Y)
-			end
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(i)
