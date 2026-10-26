@@ -1390,7 +1390,7 @@ end
 local Window={}
 Window.__index=Window
 
-local DEFAULT_GROUPS={Home="Main",Character="Player",World="Player",
+local DEFAULT_GROUPS={Home="Player",Character="Player",World="Player",
 	Property="Base",["Slot Importer"]="Base",Vehicle="Base",Builder="Base",
 	Wood="Misc",["Auto Buy"]="Misc",Dupe="Misc"}
 
@@ -1529,16 +1529,9 @@ function Window:_runSearch(q)
 	if self._contentScroll then self._contentScroll.CanvasPosition=Vector2.new(0,0) end
 end
 
-local TAP_ICONS={Farm="👆",Eggs="🥚",Upgrades="⬆",Rewards="🎁",Limited="🎃",World="🌍",Player="♟"}
-local TAP_GROUPS={Farm="Farm",Eggs="Farm",Upgrades="Farm",Rewards="Extra",Limited="Extra",World="Extra",Player="Extra"}
 function Window:CreateTab(opts)
 	if type(opts)=="string" then opts={Name=opts} end
 	opts=opts or {}
-	if type(opts.Name)=="string" and opts.Name:upper()==opts.Name and opts.Name:lower()~=opts.Name then
-		opts.Name=opts.Name:sub(1,1)..opts.Name:sub(2):lower()
-	end
-	opts.Icon=opts.Icon or TAP_ICONS[opts.Name or ""]
-	opts.Group=opts.Group or TAP_GROUPS[opts.Name or ""]
 	local rawName=opts.Name or ("Tab "..self._tabOrder)
 	local display=(rawName:gsub("%s+[Tt]ab$",""))
 	local order=opts._order or opts.Order or self._tabOrder
@@ -2139,7 +2132,6 @@ end
 
 function Odyssey:CreateWindow(opts)
 	opts=opts or {}
-
 	local function nice(t) t=tostring(t or "") if t:upper()==t and t:lower()~=t then t=t:sub(1,1)..t:sub(2):lower() end return t end
 	local name=nice(opts.Name or "Odyssey")
 	local sub=opts.Subtitle or tostring(opts.Folder or opts.Game or "")
@@ -2161,8 +2153,8 @@ function Odyssey:CreateWindow(opts)
 		pcall(function()
 			for _,f in ipairs({ROOT_FOLDER,GAME_FOLDER}) do if not isfolder(f) then makefolder(f) end end
 			if not isfile(CONFIG_FILE) then
-				local old=(opts.ConfigFolder or "OdysseyTapping").."/"..tostring(opts.ConfigName or game.PlaceId)..".json"
-				if isfile(old) then writefile(CONFIG_FILE,readfile(old)) end
+				local old=opts.OldConfig
+				if type(old)=="string" and isfile(old) then writefile(CONFIG_FILE,readfile(old)) end
 			end
 		end)
 		local cfg=isfile(CONFIG_FILE) and readJson(CONFIG_FILE) or nil
