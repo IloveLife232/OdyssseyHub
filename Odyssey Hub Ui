@@ -2376,7 +2376,6 @@ function Odyssey:CreateWindow(opts)
 	local function mtRefresh()
 		local open=Main.Visible
 		mtOrb.BackgroundTransparency=1
-		MobileToggle.Visible=not open
 		TweenService:Create(mtIcon,TweenInfo.new(0.35,Enum.EasingStyle.Back),{Rotation=open and 0 or 90}):Play()
 	end
 	Main:GetPropertyChangedSignal("Visible"):Connect(mtRefresh)
