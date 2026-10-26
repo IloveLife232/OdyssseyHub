@@ -2365,7 +2365,7 @@ function Odyssey:CreateWindow(opts)
 	pcall(function() FooterKey.Text="Toggle UI: "..toggleKey.Name.."   ·   Lib v"..Odyssey.Version end)
 	UserInputService.InputBegan:Connect(function(i,gp) if not gp and i.KeyCode==toggleKey then Main.Visible=not Main.Visible end end)
 
-	local MobileToggle=New("TextButton",{Name="OdysseyMobileToggle",Text="",BackgroundColor3=C.Card,BackgroundTransparency=0.02,BorderSizePixel=0,Size=UDim2.new(0,50,0,50),Position=UDim2.new(0,22,0.5,-182),AutoButtonColor=false,ZIndex=500,Parent=Gui})
+	local MobileToggle=New("TextButton",{Name="OdysseyMobileToggle",Text="",BackgroundColor3=C.Card,BackgroundTransparency=0.02,BorderSizePixel=0,Size=UDim2.new(0,50,0,50),Position=UDim2.new(0,23,0.5,-175),AutoButtonColor=false,ZIndex=500,Parent=Gui})
 	Corner(MobileToggle,16)
 	local mtStroke=Stroke(MobileToggle,C.White,1.5,0)
 	AccentGrad(mtStroke,45)
