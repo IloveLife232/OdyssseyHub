@@ -2237,7 +2237,7 @@ function Odyssey:CreateWindow(opts)
 		end)
 		return logoAsset or nil
 	end
-	-- Odyssey Hub icon: theme-colored round badge with a ringed planet (all drawn in code, no image upload)
+	-- Odyssey Hub icon (Ring Guard): uses the PNG when the executor can show it, otherwise draws it with UI shapes
 	local function TreeIcon(parent,size,z)
 		z=z or 1
 		local asset=getLogoAsset()
@@ -2249,22 +2249,41 @@ function Odyssey:CreateWindow(opts)
 			task.spawn(function() while img.Parent do pcall(function() img.ImageColor3=col() end) task.wait(0.5) end end)
 			return img
 		end
+		-- no image: the same Ring Guard logo drawn with UI shapes - two blade arcs around an inner ring, one theme color
+		local function col() return currentThemeColors.c2:Lerp(Color3.new(1,1,1),0.25) end
 		local holder=New("Frame",{Size=UDim2.new(0,size,0,size),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=1,ZIndex=z,Parent=parent})
-		local badge=New("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=z+1,Parent=holder})
-		Corner(badge,999)
-		AccentGrad(badge,135)
-		-- the planet's ring, tilted, sitting behind the planet so it shows on both sides
-		local band=New("Frame",{Size=UDim2.new(0.9,0,0.1,0),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.52,0),Rotation=-22,BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=z+2,Parent=holder})
-		Corner(band,999)
-		-- the planet: a white disc with a theme-colored rim so the ring looks like it goes around it
-		local planet=New("Frame",{Size=UDim2.new(0.42,0,0.42,0),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=z+3,Parent=holder})
-		Corner(planet,999)
-		local rim=Instance.new("UIStroke")
-		rim.Color=Color3.new(1,1,1)
-		rim.Thickness=math.max(1,math.floor(size*0.06+0.5))
-		rim.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
-		rim.Parent=planet
-		AccentGrad(rim,135)
+		local strokes={}
+		local function ringPart(diam,thick,zz)
+			local f=New("Frame",{Size=UDim2.new(0,diam,0,diam),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=1,BorderSizePixel=0,ZIndex=zz,Parent=holder})
+			Corner(f,999)
+			local st=Instance.new("UIStroke")
+			st.Thickness=thick
+			st.Color=col()
+			st.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+			st.Parent=f
+			table.insert(strokes,st)
+			return st
+		end
+		-- blades: an outer ring with two diagonal gaps that fade in, so it reads as two curved blades
+		local tb=math.max(2,math.floor(size*0.12+0.5))
+		local blades=ringPart(size-tb*2,tb,z+1)
+		local g=Instance.new("UIGradient")
+		g.Rotation=20
+		g.Transparency=NumberSequence.new({
+			NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(0.36,0),NumberSequenceKeypoint.new(0.45,1),
+			NumberSequenceKeypoint.new(0.55,1),NumberSequenceKeypoint.new(0.64,0),NumberSequenceKeypoint.new(1,0),
+		})
+		g.Parent=blades
+		-- inner ring
+		local ti=math.max(2,math.floor(size*0.1+0.5))
+		ringPart(math.floor(size*0.46)-ti*2,ti,z+2)
+		task.spawn(function()
+			while holder.Parent do
+				local c=col()
+				for _,st in ipairs(strokes) do pcall(function() st.Color=c end) end
+				task.wait(0.5)
+			end
+		end)
 		return holder
 	end
 	local function Logo(parent,size,pos)
