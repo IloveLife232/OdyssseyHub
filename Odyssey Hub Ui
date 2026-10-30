@@ -2215,10 +2215,56 @@ function Odyssey:CreateWindow(opts)
 	local Shade=New("Frame",{Name="Shade",Size=UDim2.new(1,0,1,0),BackgroundColor3=C.BG,BackgroundTransparency=0.12,BorderSizePixel=0,Parent=Main})
 	Corner(Shade,16); Stroke(Shade,C.CardStroke,1,0)
 
+	-- Odyssey Hub logo (Ring Guard): a PNG from GitHub, shown through the executor (no Roblox upload) and tinted to the theme.
+	-- If the executor can't show local images, it falls back to the drawn planet icon below.
+	local LOGO_URL="https://raw.githubusercontent.com/IloveLife232/OdyssseyHub/refs/heads/main/OdysseyLogo.png"
+	local LOGO_FILE="Odyssey Hub/OdysseyLogo.png"
+	local logoAsset
+	local function getLogoAsset()
+		if logoAsset~=nil then return logoAsset or nil end
+		logoAsset=false
+		local gca=getcustomasset or getsynasset
+		if type(gca)~="function" or type(writefile)~="function" or type(isfile)~="function" then return nil end
+		pcall(function()
+			if not isfile(LOGO_FILE) then
+				local data=game:HttpGet(LOGO_URL)
+				if type(data)=="string" and data:sub(2,4)=="PNG" then
+					if makefolder and isfolder and not isfolder("Odyssey Hub") then makefolder("Odyssey Hub") end
+					writefile(LOGO_FILE,data)
+				end
+			end
+			if isfile(LOGO_FILE) then logoAsset=gca(LOGO_FILE) end
+		end)
+		return logoAsset or nil
+	end
+	-- Odyssey Hub icon: theme-colored round badge with a ringed planet (all drawn in code, no image upload)
 	local function TreeIcon(parent,size,z)
 		z=z or 1
+		local asset=getLogoAsset()
+		if asset then
+			local img=New("ImageLabel",{Image=asset,ScaleType=Enum.ScaleType.Fit,Size=UDim2.new(0,size,0,size),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=1,ZIndex=z,Parent=parent})
+			-- one color: the theme's main color, a touch brighter so it pops on the dark sidebar
+			local function col() return currentThemeColors.c2:Lerp(Color3.new(1,1,1),0.25) end
+			img.ImageColor3=col()
+			task.spawn(function() while img.Parent do pcall(function() img.ImageColor3=col() end) task.wait(0.5) end end)
+			return img
+		end
 		local holder=New("Frame",{Size=UDim2.new(0,size,0,size),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundTransparency=1,ZIndex=z,Parent=parent})
-		New("TextLabel",{Text="🖕",TextScaled=true,Font=Enum.Font.BuilderSansBold,TextColor3=C.White,BackgroundTransparency=1,Size=UDim2.new(1,0,1,0),ZIndex=z+1,Parent=holder})
+		local badge=New("Frame",{Size=UDim2.new(1,0,1,0),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=z+1,Parent=holder})
+		Corner(badge,999)
+		AccentGrad(badge,135)
+		-- the planet's ring, tilted, sitting behind the planet so it shows on both sides
+		local band=New("Frame",{Size=UDim2.new(0.9,0,0.1,0),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.52,0),Rotation=-22,BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=z+2,Parent=holder})
+		Corner(band,999)
+		-- the planet: a white disc with a theme-colored rim so the ring looks like it goes around it
+		local planet=New("Frame",{Size=UDim2.new(0.42,0,0.42,0),AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,0),BackgroundColor3=Color3.new(1,1,1),BorderSizePixel=0,ZIndex=z+3,Parent=holder})
+		Corner(planet,999)
+		local rim=Instance.new("UIStroke")
+		rim.Color=Color3.new(1,1,1)
+		rim.Thickness=math.max(1,math.floor(size*0.06+0.5))
+		rim.ApplyStrokeMode=Enum.ApplyStrokeMode.Border
+		rim.Parent=planet
+		AccentGrad(rim,135)
 		return holder
 	end
 	local function Logo(parent,size,pos)
